@@ -1106,16 +1106,80 @@ window.STATE=loadState();
 document.addEventListener("DOMContentLoaded",render);
 if(document.readyState!=="loading") render();
 </script>
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyCgXcRtIw45ZKU__gantHd9mDfxjIU7oPU",
-  authDomain: "aaibaddy.firebaseapp.com",
-  databaseURL: "https://aaibaddy-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "aaibaddy",
-  storageBucket: "aaibaddy.firebasestorage.app",
-  messagingSenderId: "170208858877",
-  appId: "1:170208858877:web:3f48bd092502f679636494",
-  measurementId: "G-QGES2LMBRL"
-};
+<!-- FIREBASE REAL-TIME SYNC — paste this block BEFORE </body> -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+(function () {
+  var firebaseConfig = {
+    apiKey: "AIzaSyCgXcRtIw45ZKU__gantHd9mDfxjIU7oPU",
+    authDomain: "aaibaddy.firebaseapp.com",
+    databaseURL: "https://aaibaddy-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "aaibaddy",
+    storageBucket: "aaibaddy.firebasestorage.app",
+    messagingSenderId: "170208858877",
+    appId: "1:170208858877:web:3f48bd092502f679636494",
+    measurementId: "G-QGES2LMBRL"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  var db  = firebase.database();
+  var ref = db.ref("aai_tournament");
+  var _writing = false;
+
+  var _origSave = window.saveState;
+  window.saveState = function () {
+    _origSave();
+    if (!window.IS_ADMIN) return;
+    _writing = true;
+    var payload = {
+      players:        window.STATE.players        || [],
+      settings:       window.STATE.settings        || {},
+      pairings:       window.STATE.pairings        || {},
+      pairingsLocked: !!window.STATE.pairingsLocked,
+      matches:        window.STATE.matches         || [],
+      results:        window.STATE.results         || {},
+      autoWin:        window.STATE.autoWin          || {},
+      scheduled:      window.STATE.scheduled       || [],
+      unscheduled:    window.STATE.unscheduled     || [],
+      _v:             window.STATE._v,
+      _ts:            Date.now()
+    };
+    ref.set(payload)
+      .then(function ()  { _writing = false; })
+      .catch(function (e){ _writing = false; console.error("Firebase sync failed:", e); });
+  };
+
+  ref.once("value")
+    .then(function (snap) {
+      var data = snap.val();
+      if (!data || !data._ts) return;
+      data.activeTab = window.STATE.activeTab || "pairings";
+      window.STATE = migrate(data);
+      if (!window.STATE.matches || !window.STATE.matches.length) {
+        generateBracketsAndSchedule();
+      }
+      render();
+    })
+    .catch(function (e) {
+      console.warn("Firebase load failed, using local data:", e);
+    });
+
+  ref.on("value", function (snap) {
+    if (_writing || window.IS_ADMIN) return;
+    var data = snap.val();
+    if (!data || !data._ts) return;
+    data.activeTab = window.STATE.activeTab || "pairings";
+    window.STATE = migrate(data);
+    if (!window.STATE.matches || !window.STATE.matches.length) {
+      generateBracketsAndSchedule();
+    }
+    render();
+    toast("Live update received", "ok");
+  });
+
+  console.log("Firebase real-time sync active");
+})();
+</script>
 </body>
 </html>
