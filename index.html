@@ -1,0 +1,1110 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAI Badminton Tournament 2026 — Scheduler</title>
+<style>
+/* ============================================================================
+   THEME TOKENS  — single source of truth for colours / spacing
+   ========================================================================== */
+:root{
+  --navy:#1F4E78; --navy-d:#163759; --blue:#2E75B6; --sky:#0369A1;
+  --bg:#eef1f6; --card:#ffffff; --line:#e4e8ee; --ink:#1f2937; --muted:#6b7280;
+  --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#c2410c; --amber:#f59e0b; --amber-bg:#fffbeb;
+  --danger:#ef4444; --danger-d:#dc2626; --vacant:#f59e0b; --vacant-bg:#fff7ed;
+  --chip:#eff6ff; --chip-br:#bfdbfe; --radius:10px; --shadow:0 1px 3px rgba(16,24,40,.08);
+  --shadow-lg:0 8px 30px rgba(16,24,40,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%;}
+#app{max-width:1400px;margin:0 auto;padding:0 16px 80px}
+
+/* -------- Top bar -------- */
+.topbar{position:sticky;top:0;z-index:40;display:flex;justify-content:space-between;align-items:center;
+  gap:12px;padding:12px 20px;background:#fff;border-bottom:1px solid var(--line);
+  margin:0 -16px 0;box-shadow:var(--shadow);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--navy),var(--blue));
+  color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+.brand h1{font-size:17px;margin:0;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .sub{font-size:11px;color:var(--muted);margin-top:1px}
+.topactions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* mode pill */
+.modepill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;
+  font-size:12px;font-weight:700;border:1px solid transparent}
+.modepill.viewer{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+.modepill.admin{background:var(--amber-bg);color:#92400e;border-color:#fcd34d}
+
+/* -------- Buttons -------- */
+.btn{padding:8px 14px;border:1px solid #d1d5db;background:#fff;border-radius:8px;cursor:pointer;
+  font-size:13px;font-family:inherit;font-weight:600;color:#374151;transition:.12s;white-space:nowrap}
+.btn:hover{background:#f3f4f6}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--navy-d)}
+.btn-success{background:var(--ok);color:#fff;border-color:var(--ok)}
+.btn-success:hover{filter:brightness(.95)}
+.btn-warn{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-danger:hover{background:var(--danger-d)}
+.btn-refresh{background:var(--sky);color:#fff;border-color:var(--sky)}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--navy)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* -------- Tabs -------- */
+.tabs{display:flex;gap:6px;margin:18px 0;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab{padding:9px 16px;background:#fff;border:1px solid #d6dbe2;border-radius:8px;cursor:pointer;
+  font-size:13px;color:#374151;font-weight:600;white-space:nowrap;flex:none}
+.tab:hover{background:#f3f4f6}
+.tab.active{background:var(--navy);color:#fff;border-color:var(--navy);box-shadow:var(--shadow)}
+
+/* -------- Panels -------- */
+.panel{background:var(--card);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.panel h2{margin:0 0 4px;color:var(--navy);font-size:19px}
+.panel h3{color:var(--navy);font-size:15px;margin:26px 0 8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted);font-size:13px;line-height:1.5}
+.notice{border-radius:8px;padding:11px 14px;margin:12px 0;font-size:13px;line-height:1.5}
+.notice-blue{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.notice-amber{background:var(--amber-bg);border:1px solid #fcd34d;color:#92400e}
+
+/* -------- Tables -------- */
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+.table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;min-width:480px}
+.table th{background:var(--navy);color:#fff;padding:9px 11px;text-align:left;font-weight:600;position:sticky;top:0}
+.table td{padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:middle}
+.table tr:nth-child(even) td{background:#f8fafc}
+.table tr.pending td{background:var(--amber-bg)}
+.table tr.done td{background:var(--ok-bg)}
+.ok{color:var(--ok);font-weight:700}.warn{color:var(--warn);font-weight:700}
+.winner{background:#c6efce !important;font-weight:700}
+.bye{color:#9ca3af;font-style:italic}
+
+/* -------- Forms -------- */
+.addform{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 18px;padding:14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;align-items:center}
+.addform input,.addform select,.fld{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;background:#fff}
+.settings-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
+.settings-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#374151;font-weight:700}
+.settings-grid input{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
+
+/* -------- Category cards / pairings -------- */
+.cat-block{border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0;background:#fcfdff}
+.cat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.cat-title{font-size:15px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:9px}
+.cat-title .dot{width:10px;height:10px;border-radius:3px;background:var(--blue)}
+.count-badge{font-size:11px;font-weight:700;color:var(--muted);background:#eef2f7;border:1px solid var(--line);padding:2px 9px;border-radius:999px}
+
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:10px}
+.team-card{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;
+  padding:9px 11px;background:#fff;box-shadow:var(--shadow)}
+.team-no{flex:none;width:26px;height:26px;border-radius:7px;background:var(--navy);color:#fff;
+  font-size:12px;font-weight:700;display:grid;place-items:center}
+.slots{display:flex;align-items:center;gap:7px;flex:1;min-width:0;flex-wrap:wrap}
+.vs{color:var(--muted);font-size:11px;font-weight:700}
+
+/* a player chip inside a slot */
+.slot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;font-size:13px;
+  font-weight:600;min-width:96px}
+.slot.filled{background:var(--chip);border:1px solid var(--chip-br);color:#1e3a8a}
+.slot.vacant{background:var(--vacant-bg);border:1.5px dashed var(--vacant);color:#b45309;cursor:default;
+  justify-content:center;font-style:italic}
+.slot.vacant.droptarget,.slot.filled.droptarget{outline:3px solid rgba(31,78,120,.35);outline-offset:1px;background:#dbeafe}
+.slot .x{cursor:pointer;color:#b45309;font-weight:800;border-radius:4px;padding:0 3px}
+.slot .x:hover{background:rgba(180,83,9,.15)}
+.admin .slot.vacant{cursor:pointer}
+.admin .slot.vacant:hover{background:#ffedd5}
+
+/* draggable player chips (unpaired list + movable slot chips) */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;font-size:13px;
+  font-weight:600;background:var(--chip);border:1px solid var(--chip-br);color:#1e3a8a}
+.admin .chip.drag{cursor:grab}
+.admin .chip.drag:active{cursor:grabbing}
+.chip.drag .grip{color:#93a8cf;font-weight:800;letter-spacing:-2px}
+.chip.dragging{opacity:.4}
+.chip .g{font-size:10px;color:#64748b;font-weight:700}
+
+.unpaired{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+.unpaired h4{margin:0 0 8px;font-size:12.5px;color:var(--warn);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:8px}
+.unpaired .pool{display:flex;flex-wrap:wrap;gap:7px;min-height:42px;padding:10px;border:1.5px dashed var(--line);
+  border-radius:10px;background:#fff;transition:.12s}
+.unpaired .pool.droptarget{border-color:var(--navy);background:#eff6ff}
+.unpaired .empty{color:var(--muted);font-size:12.5px;font-style:italic;padding:4px}
+
+/* -------- Brackets -------- */
+.subtabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.subtab{padding:7px 14px;background:#eef2f7;border:1px solid #d6dbe2;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:600}
+.subtab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.bracket-wrap{display:flex;gap:30px;overflow-x:auto;padding:12px 0 22px}
+.bracket-col{display:flex;flex-direction:column;gap:10px;min-width:210px}
+.bracket-stage{font-weight:700;color:#fff;background:var(--blue);padding:6px 12px;border-radius:7px;text-align:center;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+.match-card{background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:12.5px;box-shadow:var(--shadow)}
+.match-id{font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700}
+.match-side{padding:4px 0;border-top:1px dashed var(--line)}
+.match-side:first-of-type{border-top:none}
+.match-side.winner{background:#c6efce;padding:4px 7px;border-radius:4px}
+
+/* -------- Stats / filters -------- */
+.stats-bar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.stat-card{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px 15px;min-width:130px}
+.stat-label{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.stat-nums{font-size:14px;margin-top:3px}
+.stat-played{color:var(--ok);font-weight:800}.stat-remaining{color:var(--warn);font-weight:800}.stat-total{color:var(--muted)}
+.filterbar{display:flex;gap:16px;margin:12px 0;align-items:flex-end;flex-wrap:wrap}
+.filterbar label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700}
+.filterbar select{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px}
+.actionbar{display:flex;gap:10px;margin:14px 0;align-items:center;flex-wrap:wrap}
+.badge{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.badge-success{background:#c6efce;color:#166534}
+.resbtns{display:flex;gap:5px}
+
+/* -------- Modal / toast -------- */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:#fff;border-radius:14px;box-shadow:var(--shadow-lg);max-width:440px;width:100%;padding:22px;animation:pop .14s ease}
+@keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h3{margin:0 0 6px;color:var(--navy);font-size:18px}
+.modal .row{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap}
+.modal input[type=text],.modal input[type=password]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;margin-top:6px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.checks label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.checks label.dis{opacity:.4;cursor:not-allowed}
+.pick-pool{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;max-height:280px;overflow:auto}
+.pick-pool .chip{cursor:pointer}
+.pick-pool .chip:hover{background:#dbeafe}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#111827;color:#fff;
+  padding:11px 18px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:200;box-shadow:var(--shadow-lg);opacity:0;transition:.2s}
+.toast.show{opacity:1}
+.toast.warn{background:#b45309}.toast.ok{background:#15803d}
+
+/* -------- Responsive -------- */
+@media (max-width:720px){
+  #app{padding:0 10px 70px}
+  .topbar{padding:10px 12px}
+  .brand h1{font-size:15px;max-width:54vw}
+  .settings-grid{grid-template-columns:1fr}
+  .team-grid{grid-template-columns:1fr}
+  .checks{grid-template-columns:1fr}
+  .panel{padding:15px}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- ===================================================================== -->
+<!-- SEED DATA  (verbatim canonical roster + state — injected at build)    -->
+<!-- ===================================================================== -->
+<script id="seed-data">
+window.SEED_PLAYERS = [{"id": 1, "name": "Sachin Nanda", "gender": "Male", "cats": ["XD", "MS"], "partner_pref": null}, {"id": 2, "name": "Sandeep Singh", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 3, "name": "Chitra Sharma", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 4, "name": "Divya", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 5, "name": "Aditya Jerath", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 6, "name": "Ravi Dua", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 7, "name": "Abhinay Rana", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 8, "name": "Mayank Changotra", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 9, "name": "Biswajit Das", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 10, "name": "Amitesh Singh", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 11, "name": "Sheetal Bhadani", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 12, "name": "Harsh Singh", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 13, "name": "Fahd Khan", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 14, "name": "Nihit Kapoor", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 15, "name": "Sanjana Chaudhary", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 16, "name": "Monish Thapa", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 17, "name": "Singh Shrikant", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 18, "name": "Tathagat Sarthaka", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 19, "name": "Himesh Dutta", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 20, "name": "Anshul Mandawat", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 21, "name": "Pranshu Virmani", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 22, "name": "Shashank Sinsinwar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 23, "name": "Priyansh Chaudhary", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 24, "name": "Nakul Khanna", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 25, "name": "Chandra Prakash", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 26, "name": "Dishant Raturi", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 27, "name": "Rahul Kamboj", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 28, "name": "Komal .", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 29, "name": "Shailendra Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 30, "name": "Saurabh Agarwal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 31, "name": "Ramit Mittal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 32, "name": "Akshat Bussi", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 33, "name": "Parth Pathak", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 34, "name": "Abhiraj Patkar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 35, "name": "Abhishek Trivedi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 36, "name": "Aayushi Aggarwal", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 37, "name": "Divyanshu Raj", "gender": "Male", "cats": ["XD"], "partner_pref": "Ishani Singh"}, {"id": 38, "name": "Ishani Singh", "gender": "Female", "cats": ["XD", "WD"], "partner_pref": "Divyanshu Raj "}, {"id": 39, "name": "Aftab Khan", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 40, "name": "Akhil Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 41, "name": "Nikhil Arora", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 42, "name": "Mihir Raj", "gender": "Male", "cats": ["XD", "MD"], "partner_pref": null}, {"id": 43, "name": "Pratyush Kumar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 44, "name": "Vinod Yadav", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 45, "name": "Vikash Rajak", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 46, "name": "Deepak Dwivedi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 47, "name": "Chaitanya Thainua", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 48, "name": "Deepanshu Gera", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 49, "name": "Priyanka Solanki", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 50, "name": "Himanshu Bist", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 51, "name": "Kunal Roy", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 52, "name": "Rahul Napa", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 53, "name": "Mandeep Randhawa", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 54, "name": "Prakhar Agarwal", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 55, "name": "Parth Khatter", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": "Harsha Upadhaya & Vivek Singhal"}, {"id": 56, "name": "Ishita Budhiraja", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 57, "name": "Amit Mittal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 58, "name": "Zubin Mehta", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 59, "name": "Anubha Roy", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 60, "name": "Ragini Pande", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": "Ayush Jha"}, {"id": 61, "name": "Shishir Geel", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 62, "name": "Mohit Arora", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 63, "name": "Rahul Jindal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 64, "name": "Yash Jhawar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 65, "name": "Shubham Arora", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 66, "name": "Harshit Chauhan", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 67, "name": "Hemu Choudhary", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 68, "name": "Bhavyaa Sharma", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 69, "name": "Vaishnav Gandhi", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 70, "name": "Ritika", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 71, "name": "Vivek Singhal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": "Harsha Upadhaya & Parth Khatter"}, {"id": 72, "name": "Harsha Upadhyay", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": "Vivek Singhal & Parth Khatter"}, {"id": 73, "name": "Pinki Gupta", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 74, "name": "Neha Singh", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 75, "name": "Vinay Sharma", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 76, "name": "Sharnik", "gender": "Male", "cats": ["XD", "MD"], "partner_pref": null}, {"id": 77, "name": "Bhawna", "gender": "Female", "cats": ["WS", "WD", "XD"], "partner_pref": "Yashul"}, {"id": 78, "name": "Nishtha Dewan", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 79, "name": "Sanchita", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 80, "name": "Lakhwinder Singh", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 81, "name": "Kajal Rawat", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 82, "name": "Tanvi Garg", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 83, "name": "Meenakshi Gupta", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 84, "name": "Satyan Bindlish", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 85, "name": "Rahul Verma", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 86, "name": "Gurkirat Gujral", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 87, "name": "Ashish Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 88, "name": "Tejasev Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 89, "name": "Piyush Tak", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 90, "name": "Sandeep Singh", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 91, "name": "Kumar Gaurav", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 92, "name": "Tarun Rishi", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 93, "name": "Vineet Singhal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 94, "name": "Yash Taunk", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 95, "name": "Abdu Rahman", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 96, "name": "Vijay Garg", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 97, "name": "Aditya Jain", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 98, "name": "Shruti Agrawal", "gender": "Female", "cats": ["WD", "WS"], "partner_pref": null}, {"id": 99, "name": "Nitin Kumar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 100, "name": "Tanishk Kaim", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 101, "name": "Loveleen Mohan", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 102, "name": "Gandharv Singhal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 103, "name": "Karan Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 104, "name": "Rishita Babra", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 105, "name": "Adarsh Kesarwani", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 106, "name": "Anil", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 107, "name": "Mahak Chopra", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 108, "name": "vishakha khandelwal", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 109, "name": "Neha Chadha", "gender": "Female", "cats": ["WD", "WS"], "partner_pref": null}, {"id": 110, "name": "Ashutosh Kumra", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 111, "name": "Bbhavya Goel", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 112, "name": "Prerna", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 113, "name": "Gopika Baburajan", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 114, "name": "Narendra Yadav", "gender": "Male", "cats": ["XD", "MS"], "partner_pref": null}, {"id": 115, "name": "Akshay Magre", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 116, "name": "Parijat", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 117, "name": "Shiva Jain", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 118, "name": "Prashant Tripathi", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 119, "name": "Gunjan Pal", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 120, "name": "Emmy Anita Gilbert", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 121, "name": "Simerjeet Kaur", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 122, "name": "Chayan ShrangRaj", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 123, "name": "Deepanshu Arora", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 124, "name": "Mudit Singh", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 125, "name": "Nikhil Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 126, "name": "Ayush Jha", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": "Ragini Pande"}, {"id": 127, "name": "Yashul Goel", "gender": "Male", "cats": ["XD"], "partner_pref": "Bhawna"}, {"id": 128, "name": "Ajinkyakumar Ramesh Suryawanshi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 129, "name": "Vikram Singh", "gender": "Male", "cats": ["MS"], "partner_pref": null}];
+/*SEED_STATE_START*/
+window.SEED_STATE = {"players": [{"id": 1, "name": "Sachin Nanda", "gender": "Male", "cats": ["XD", "MS"], "partner_pref": null}, {"id": 2, "name": "Sandeep Singh", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 3, "name": "Chitra Sharma", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 4, "name": "Divya", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 5, "name": "Aditya Jerath", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 6, "name": "Ravi Dua", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 7, "name": "Abhinay Rana", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 8, "name": "Mayank Changotra", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 9, "name": "Biswajit Das", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 10, "name": "Amitesh Singh", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 11, "name": "Sheetal Bhadani", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 12, "name": "Harsh Singh", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 13, "name": "Fahd Khan", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 14, "name": "Nihit Kapoor", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 15, "name": "Sanjana Chaudhary", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 16, "name": "Monish Thapa", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 17, "name": "Singh Shrikant", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 18, "name": "Tathagat Sarthaka", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 19, "name": "Himesh Dutta", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 20, "name": "Anshul Mandawat", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 21, "name": "Pranshu Virmani", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 22, "name": "Shashank Sinsinwar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 23, "name": "Priyansh Chaudhary", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 24, "name": "Nakul Khanna", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 25, "name": "Chandra Prakash", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 26, "name": "Dishant Raturi", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 27, "name": "Rahul Kamboj", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 28, "name": "Komal .", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 29, "name": "Shailendra Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 30, "name": "Saurabh Agarwal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 31, "name": "Ramit Mittal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 32, "name": "Akshat Bussi", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 33, "name": "Parth Pathak", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 34, "name": "Abhiraj Patkar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 35, "name": "Abhishek Trivedi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 36, "name": "Aayushi Aggarwal", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 37, "name": "Divyanshu Raj", "gender": "Male", "cats": ["XD"], "partner_pref": "Ishani Singh"}, {"id": 38, "name": "Ishani Singh", "gender": "Female", "cats": ["XD", "WD"], "partner_pref": "Divyanshu Raj "}, {"id": 39, "name": "Aftab Khan", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 40, "name": "Akhil Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 41, "name": "Nikhil Arora", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 42, "name": "Mihir Raj", "gender": "Male", "cats": ["XD", "MD"], "partner_pref": null}, {"id": 43, "name": "Pratyush Kumar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 44, "name": "Vinod Yadav", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 45, "name": "Vikash Rajak", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 46, "name": "Deepak Dwivedi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 47, "name": "Chaitanya Thainua", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 48, "name": "Deepanshu Gera", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 49, "name": "Priyanka Solanki", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 50, "name": "Himanshu Bist", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 51, "name": "Kunal Roy", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 52, "name": "Rahul Napa", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 53, "name": "Mandeep Randhawa", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 54, "name": "Prakhar Agarwal", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 55, "name": "Parth Khatter", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": "Harsha Upadhaya & Vivek Singhal"}, {"id": 56, "name": "Ishita Budhiraja", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 57, "name": "Amit Mittal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 58, "name": "Zubin Mehta", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 59, "name": "Anubha Roy", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 60, "name": "Ragini Pande", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": "Ayush Jha"}, {"id": 61, "name": "Shishir Geel", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 62, "name": "Mohit Arora", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 63, "name": "Rahul Jindal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 64, "name": "Yash Jhawar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 65, "name": "Shubham Arora", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 66, "name": "Harshit Chauhan", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 67, "name": "Hemu Choudhary", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 68, "name": "Bhavyaa Sharma", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 69, "name": "Vaishnav Gandhi", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 70, "name": "Ritika", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 71, "name": "Vivek Singhal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": "Harsha Upadhaya & Parth Khatter"}, {"id": 72, "name": "Harsha Upadhyay", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": "Vivek Singhal & Parth Khatter"}, {"id": 73, "name": "Pinki Gupta", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 74, "name": "Neha Singh", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 75, "name": "Vinay Sharma", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 76, "name": "Sharnik", "gender": "Male", "cats": ["XD", "MD"], "partner_pref": null}, {"id": 77, "name": "Bhawna", "gender": "Female", "cats": ["WS", "WD", "XD"], "partner_pref": "Yashul"}, {"id": 78, "name": "Nishtha Dewan", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 79, "name": "Sanchita", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 80, "name": "Lakhwinder Singh", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 81, "name": "Kajal Rawat", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 82, "name": "Tanvi Garg", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 83, "name": "Meenakshi Gupta", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 84, "name": "Satyan Bindlish", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 85, "name": "Rahul Verma", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 86, "name": "Gurkirat Gujral", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 87, "name": "Ashish Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 88, "name": "Tejasev Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 89, "name": "Piyush Tak", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 90, "name": "Sandeep Singh", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 91, "name": "Kumar Gaurav", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 92, "name": "Tarun Rishi", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 93, "name": "Vineet Singhal", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 94, "name": "Yash Taunk", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 95, "name": "Abdu Rahman", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 96, "name": "Vijay Garg", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 97, "name": "Aditya Jain", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 98, "name": "Shruti Agrawal", "gender": "Female", "cats": ["WD", "WS"], "partner_pref": null}, {"id": 99, "name": "Nitin Kumar", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 100, "name": "Tanishk Kaim", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 101, "name": "Loveleen Mohan", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 102, "name": "Gandharv Singhal", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 103, "name": "Karan Kumar", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 104, "name": "Rishita Babra", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 105, "name": "Adarsh Kesarwani", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 106, "name": "Anil", "gender": "Male", "cats": ["MD", "MS"], "partner_pref": null}, {"id": 107, "name": "Mahak Chopra", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 108, "name": "vishakha khandelwal", "gender": "Female", "cats": ["WS", "XD"], "partner_pref": null}, {"id": 109, "name": "Neha Chadha", "gender": "Female", "cats": ["WD", "WS"], "partner_pref": null}, {"id": 110, "name": "Ashutosh Kumra", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 111, "name": "Bbhavya Goel", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 112, "name": "Prerna", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 113, "name": "Gopika Baburajan", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 114, "name": "Narendra Yadav", "gender": "Male", "cats": ["XD", "MS"], "partner_pref": null}, {"id": 115, "name": "Akshay Magre", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 116, "name": "Parijat", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 117, "name": "Shiva Jain", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": null}, {"id": 118, "name": "Prashant Tripathi", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 119, "name": "Gunjan Pal", "gender": "Female", "cats": ["WD", "XD"], "partner_pref": null}, {"id": 120, "name": "Emmy Anita Gilbert", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 121, "name": "Simerjeet Kaur", "gender": "Female", "cats": ["WS", "WD"], "partner_pref": null}, {"id": 122, "name": "Chayan ShrangRaj", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 123, "name": "Deepanshu Arora", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 124, "name": "Mudit Singh", "gender": "Male", "cats": ["MD", "XD"], "partner_pref": null}, {"id": 125, "name": "Nikhil Gupta", "gender": "Male", "cats": ["MS", "MD"], "partner_pref": null}, {"id": 126, "name": "Ayush Jha", "gender": "Male", "cats": ["MS", "XD"], "partner_pref": "Ragini Pande"}, {"id": 127, "name": "Yashul Goel", "gender": "Male", "cats": ["XD"], "partner_pref": "Bhawna"}, {"id": 128, "name": "Ajinkyakumar Ramesh Suryawanshi", "gender": "Male", "cats": ["MS"], "partner_pref": null}, {"id": 129, "name": "Vikram Singh", "gender": "Male", "cats": ["MS"], "partner_pref": null}], "settings": {"seed": 42, "qualifierDuration": 15, "knockoutDuration": 40, "blocks": [{"date": "2026-07-04", "label": "11:00-13:00", "startMin": 660, "endMin": 780, "courts": 2, "phase": "QUALIFIER"}, {"date": "2026-07-04", "label": "13:00-15:00", "startMin": 780, "endMin": 900, "courts": 4, "phase": "QUALIFIER"}, {"date": "2026-07-05", "label": "13:00-19:00", "startMin": 780, "endMin": 1140, "courts": 4, "phase": "QUALIFIER"}, {"date": "2026-07-11", "label": "11:00-13:00", "startMin": 660, "endMin": 780, "courts": 2, "phase": "KNOCKOUT"}, {"date": "2026-07-11", "label": "13:00-15:00", "startMin": 780, "endMin": 900, "courts": 4, "phase": "KNOCKOUT"}, {"date": "2026-07-12", "label": "13:00-19:00", "startMin": 780, "endMin": 1140, "courts": 4, "phase": "KNOCKOUT"}]}, "pairings": {"MS": [[71], [97], [35], [75], [45], [89], [16], [65], [91], [55], [24], [103], [94], [54], [61], [96], [39], [2], [117], [90], [87], [30], [102], [31], [63], [48], [47], [14], [99], [5], [26], [52], [34], [57], [12], [95], [114], [17], [86], [33], [100], [93], [18], [69], [1], [80], [115], [53], [116], [126], [40], [50], [64], [58], [20], [122], [44], [41], [106], [125], [8], [88], [19], [105], [21], [29], [43], [46], [51], [7], [22], [110], [118], [128], [129]], "WS": [[15], [4], [72], [109], [82], [107], [67], [74], [28], [81], [36], [56], [112], [120], [104], [98], [11], [70], [113], [121], [101], [60], [73], [77], [49], [59], [108], [83]], "XD": [[37, 38], [60, 126], [72, 71], [53, 36], [102, null], [92, 59], [1, 73], [84, 107], [80, 108], [51, null], [9, 70], [12, 119], [124, 11], [16, 49], [30, 68], [62, 78], [34, null], [23, 3], [117, 79], [127, 77]], "MD": [[6, 10], [41, 99], [123, 125], [89, 40], [14, 75], [92, 50], [58, 69], [45, 7], [97, 124], [54, 26], [42, 20], [66, 23], [27, 63], [17, 31], [13, 57], [22, 88], [62, 76], [61, 106], [32, 115], [85, 39], [25, 33], [91, 84], [90, 110], [5, 55], [118, 105], [94, 47], [18, 111], [9, 21], [8, 93], [65, 43], [null, 48]], "WD": [[109, 67], [15, 3], [38, 120], [68, 98], [82, 83], [121, 119], [77, 4], [56, 79], [81, 74], [113, 104], [112, 78], [28, 101]]}, "pairingsLocked": true, "matches": [], "results": {}, "autoWin": {}, "scheduled": [], "unscheduled": [], "activeTab": "pairings"};
+/*SEED_STATE_END*/
+</script>
+
+<!-- ===================================================================== -->
+<!-- APPLICATION LOGIC                                                     -->
+<!-- ===================================================================== -->
+<script>
+"use strict";
+/* =========================================================================
+   AAI BADMINTON TOURNAMENT — interactive scheduler
+   -------------------------------------------------------------------------
+   ARCHITECTURE (high level)
+   - Single self-contained HTML file. No backend, no external data calls
+     (all data stays local to the file / browser — EXL-safe).
+   - window.STATE is the single source of truth. It is persisted to
+     localStorage (key below). The canonical starting data is baked into
+     window.SEED_STATE in the <script id="seed-data"> block above.
+   - Read-only by DEFAULT. Editing unlocks only after the admin enters the
+     password (client-side gate — deters casual edits, not strong security).
+   - A "view-only copy" can be downloaded: it bakes the current STATE and sets
+     window.FORCE_SEED so recipients always see that published snapshot.
+   ========================================================================= */
+
+/* ---------------------------------------------------------------------------
+   ADMIN GATE — the password is NEVER stored in this file. We keep only a
+   salted SHA-256 hash, so the password cannot be read from the source code.
+   To change the password, replace ADMIN_PASS_HASH below with the value of
+   sha256(ADMIN_SALT + ":" + yourNewPassword).
+   NOTE: hashing hides the password, but because everything runs in the
+   browser it cannot stop a determined user with dev tools from forcing
+   admin mode. True enforcement would require a server (out of scope here).
+   --------------------------------------------------------------------------- */
+const ADMIN_SALT = "AAI-BMT-2026";
+const ADMIN_PASS_HASH = "7389678e7631ce986eb70c2c10c162288c0d78ed961f80aeb2d6348e22fb1823";
+/* Self-contained SHA-256 (works offline / on file://, no Web Crypto needed). */
+function sha256(ascii){
+  function rr(n,x){return (x>>>n)|(x<<(32-n));}
+  var maxWord=Math.pow(2,32),result="";
+  var words=[],asciiBitLength=ascii.length*8;
+  var hash=sha256.h=sha256.h||[],k=sha256.k=sha256.k||[],primeCounter=k.length;
+  var isComposite={};
+  for(var candidate=2;primeCounter<64;candidate++){
+    if(!isComposite[candidate]){
+      for(var i=0;i<313;i+=candidate)isComposite[i]=candidate;
+      hash[primeCounter]=(Math.pow(candidate,0.5)*maxWord)|0;
+      k[primeCounter++]=(Math.pow(candidate,1/3)*maxWord)|0;
+    }
+  }
+  ascii+="\x80";
+  while(ascii.length%64-56)ascii+="\x00";
+  for(i=0;i<ascii.length;i++){var j=ascii.charCodeAt(i);if(j>>8)return;words[i>>2]|=j<<((3-i)%4)*8;}
+  words[words.length]=(asciiBitLength/maxWord)|0; words[words.length]=asciiBitLength;
+  for(j=0;j<words.length;){
+    var w=words.slice(j,j+=16),oldHash=hash; hash=hash.slice(0,8);
+    for(i=0;i<64;i++){
+      var w15=w[i-15],w2=w[i-2],a=hash[0],e=hash[4];
+      var temp1=hash[7]+(rr(6,e)^rr(11,e)^rr(25,e))+((e&hash[5])^((~e)&hash[6]))+k[i]+
+        (w[i]=i<16?w[i]:(w[i-16]+(rr(7,w15)^rr(18,w15)^(w15>>>3))+w[i-7]+(rr(17,w2)^rr(19,w2)^(w2>>>10)))|0);
+      var temp2=(rr(2,a)^rr(13,a)^rr(22,a))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+      hash=[(temp1+temp2)|0].concat(hash); hash[4]=(hash[4]+temp1)|0;
+    }
+    for(i=0;i<8;i++)hash[i]=(hash[i]+oldHash[i])|0;
+  }
+  for(i=0;i<8;i++)for(j=3;j+1;j--){var b=(hash[i]>>(j*8))&255;result+=((b<16)?0:"")+b.toString(16);}
+  return result;
+}
+
+const CAT_ORDER = ["MS","WS","XD","MD","WD"];
+const CAT_LABEL = {MS:"Men's Singles",MD:"Men's Doubles",WS:"Women's Singles",WD:"Women's Doubles",XD:"Mixed Doubles"};
+const DOUBLES = {MD:true,WD:true,XD:true};
+const SINGLES = {MS:true,WS:true};
+/* required gender per category (XD = either) — used for eligibility checks */
+const GENDER_OK = {MS:"Male",MD:"Male",WS:"Female",WD:"Female",XD:null};
+/* tolerant mapping of the various spellings used across the source sheets */
+const CAT_MAP = {
+  "Men Singles":"MS","Men's Single":"MS","Men's Singles":"MS","MS":"MS",
+  "Men's Double":"MD","Men's Doubles":"MD","MD":"MD",
+  "Women Singles":"WS","Women's Single":"WS","Women's Singles":"WS","WS":"WS",
+  "Women's Double":"WD","Women's Doubles":"WD","WD":"WD",
+  "Mixed Doubles":"XD","Mixed Double":"XD","Mixed Double Category":"XD","XD":"XD",
+};
+const STORAGE_KEY = "aai_tournament_v1";
+/* Bump SEED_VERSION whenever the baked roster/pairings change. A saved state
+   from an older version is ignored so the new official data always wins, while
+   edits made against the current version still persist across reloads. */
+const SEED_VERSION = "2026-06-29-129p";
+
+/* in-memory only (never persisted): auth + session-only "undo fill" tracking */
+window.IS_ADMIN = false;
+window._recentFills = new Set();          // "cat:teamIdx:slot" filled this session → vacate-able
+function isAdmin(){ return window.IS_ADMIN === true; }
+function isViewer(){ return !isAdmin(); } // everyone is a viewer until they log in
+
+/* ---------------- Seeded RNG (only used for fresh generation) ------------ */
+function seededRng(seed){let a=seed>>>0;return function(){a|=0;a=(a+0x6D2B79F5)|0;let t=a;
+  t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function shuffle(arr,rng){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+/* ---------------- Defaults ------------------------------------------------ */
+function defaultSettings(){
+  return {seed:42,qualifierDuration:15,knockoutDuration:40,blocks:[
+    {date:"2026-07-04",label:"11:00-13:00",startMin:660,endMin:780,courts:2,phase:"QUALIFIER"},
+    {date:"2026-07-04",label:"13:00-15:00",startMin:780,endMin:900,courts:4,phase:"QUALIFIER"},
+    {date:"2026-07-05",label:"13:00-19:00",startMin:780,endMin:1140,courts:4,phase:"QUALIFIER"},
+    {date:"2026-07-11",label:"11:00-13:00",startMin:660,endMin:780,courts:2,phase:"KNOCKOUT"},
+    {date:"2026-07-11",label:"13:00-15:00",startMin:780,endMin:900,courts:4,phase:"KNOCKOUT"},
+    {date:"2026-07-12",label:"13:00-19:00",startMin:780,endMin:1140,courts:4,phase:"KNOCKOUT"},
+  ]};
+}
+function defaultState(){
+  return {players:(window.SEED_PLAYERS||[]).map(p=>({...p})),settings:defaultSettings(),
+    pairings:{},pairingsLocked:false,matches:[],results:{},autoWin:{},scheduled:[],unscheduled:[],activeTab:"players"};
+}
+
+/* ---------------- Persistence + migration --------------------------------- */
+function saveState(){ if(window.FORCE_SEED) return; /* never overwrite a published snapshot */
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(window.STATE)); }catch(e){} }
+function migrate(s){
+  /* additive, non-destructive: guarantees every expected field exists so old
+     saved states (and the baked seed) load without breaking. */
+  s.players=s.players||[]; s.pairings=s.pairings||{}; s.results=s.results||{};
+  s.matches=s.matches||[]; s.scheduled=s.scheduled||[]; s.unscheduled=s.unscheduled||[];
+  s.autoWin=s.autoWin||{}; s.settings=s.settings||defaultSettings();
+  if(typeof s.pairingsLocked!=="boolean") s.pairingsLocked=false;
+  s.activeTab=s.activeTab||"pairings";
+  for(const c of CAT_ORDER){ if(!Array.isArray(s.pairings[c])) s.pairings[c]=[]; }
+  return s;
+}
+function seededState(){ const s=migrate(JSON.parse(JSON.stringify(window.SEED_STATE))); s._v=SEED_VERSION; return s; }
+function loadState(){
+  if(window.FORCE_SEED && window.SEED_STATE) return seededState();        // published snapshot
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(raw){ try{ const s=migrate(JSON.parse(raw)); if(s._v===SEED_VERSION) return s; /* else: stale → fall through and reload official seed */ }catch(e){} }
+  if(window.SEED_STATE) return seededState();
+  const d=migrate(defaultState()); d._v=SEED_VERSION; return d;
+}
+function resetState(){
+  if(!isAdmin()) return;
+  if(confirm("Reset ALL data back to the originally-loaded roster & pairings? Your edits in this browser will be lost.")){
+    localStorage.removeItem(STORAGE_KEY);
+    window.STATE=window.SEED_STATE?JSON.parse(JSON.stringify(window.SEED_STATE)):defaultState();
+    migrate(window.STATE); window._recentFills.clear(); render();
+  }
+}
+
+/* ---------------- Small helpers ------------------------------------------- */
+function nextPlayerId(){const ids=window.STATE.players.map(p=>p.id);return ids.length?Math.max(...ids)+1:1;}
+function pById(id){ return window.STATE.players.find(p=>p.id===id); }
+function pname(id){ return id==null?"[Vacant]":((pById(id)||{}).name||("#"+id)); }
+function normName(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ").replace(/\.$/,"").trim();}
+function mmToHHMM(m){const h=Math.floor(m/60),mn=m%60;return String(h).padStart(2,"0")+":"+String(mn).padStart(2,"0");}
+function dateLabel(d){const map={"2026-07-04":"4 Jul","2026-07-05":"5 Jul","2026-07-11":"11 Jul","2026-07-12":"12 Jul"};return map[d]||d;}
+
+/* =========================================================================
+   ELIGIBILITY + AVAILABILITY  (Requirements 4 & 5)
+   ========================================================================= */
+/* roster = every player who nominated a category AND matches its gender rule */
+function buildRosters(){
+  const r={MS:[],MD:[],WS:[],WD:[],XD:[]};
+  for(const p of window.STATE.players){
+    for(const c of p.cats||[]){
+      const k=CAT_MAP[c]||c; if(!r[k]) continue;
+      if(GENDER_OK[k] && p.gender!==GENDER_OK[k]) continue; // gender filter
+      if(!r[k].includes(p.id)) r[k].push(p.id);
+    }
+  }
+  return r;
+}
+/* players eligible for a category but NOT currently in any of its teams.
+   Recomputed on every render → updates automatically on add/remove/recat/repair. */
+function getUnpaired(cat){
+  const roster=buildRosters()[cat]||[];
+  const paired=new Set();
+  for(const t of (window.STATE.pairings[cat]||[])) for(const pid of t) if(pid!=null) paired.add(pid);
+  return roster.filter(pid=>!paired.has(pid));
+}
+function isEligible(pid,cat){ return (buildRosters()[cat]||[]).includes(pid); }
+
+/* =========================================================================
+   PAIRING / BRACKET / SCHEDULE ENGINE
+   (null is allowed inside a team = a VACANT slot — handled everywhere)
+   ========================================================================= */
+function pairDoubles(ids,mixed,rng){
+  const used=new Set(),teams=[];
+  for(const pid of ids){
+    if(used.has(pid))continue; const p=pById(pid); if(!p||!p.partner_pref)continue;
+    const prefs=p.partner_pref.replace(/&/g,",").split(",").map(s=>s.trim()).filter(Boolean);
+    for(const pref of prefs){
+      const target=ids.find(qid=>!used.has(qid)&&qid!==pid&&normName(pById(qid).name)===normName(pref));
+      if(target){ if(mixed&&pById(pid).gender===pById(target).gender)continue;
+        teams.push([pid,target]);used.add(pid);used.add(target);break; }
+    }
+  }
+  const remaining=ids.filter(pid=>!used.has(pid));
+  if(mixed){
+    const m=shuffle(remaining.filter(pid=>pById(pid).gender==="Male"),rng);
+    const f=shuffle(remaining.filter(pid=>pById(pid).gender==="Female"),rng);
+    const n=Math.min(m.length,f.length); for(let i=0;i<n;i++)teams.push([m[i],f[i]]);
+  }else{ const r=shuffle(remaining,rng); for(let i=0;i+1<r.length;i+=2)teams.push([r[i],r[i+1]]); }
+  return teams;
+}
+function generatePairings(){
+  const rng=seededRng(window.STATE.settings.seed),rosters=buildRosters(),pairings={};
+  for(const c of CAT_ORDER){ const ids=rosters[c];
+    pairings[c]=(c==="MS"||c==="WS")?shuffle(ids,rng).map(pid=>[pid]):pairDoubles(ids,c==="XD",rng); }
+  return pairings;
+}
+function buildBracket(entrants,catCode){
+  if(entrants.length<2)return [];
+  let size=1; while(size<entrants.length)size*=2;
+  const byes=size-entrants.length,ordered=[];
+  for(let i=0;i<byes;i++){ordered.push({type:"entrant",idx:i});ordered.push({type:"bye"});}
+  for(let i=byes;i<entrants.length;i++)ordered.push({type:"entrant",idx:i});
+  const rounds=[],r1=[];
+  for(let j=0;j<ordered.length;j+=2)r1.push({match_id:`${catCode}-R1-${j/2+1}`,cat:catCode,round:1,side_a:ordered[j],side_b:ordered[j+1]});
+  rounds.push(r1); let prev=r1,rnd=2;
+  while(prev.length>1){const cur=[];
+    for(let j=0;j<prev.length;j+=2)cur.push({match_id:`${catCode}-R${rnd}-${j/2+1}`,cat:catCode,round:rnd,
+      side_a:{winner_of:prev[j].match_id},side_b:{winner_of:prev[j+1].match_id}});
+    rounds.push(cur);prev=cur;rnd++;}
+  return rounds;
+}
+/* player ids that could appear in a match (null vacancies skipped) */
+function matchPlayers(match,matchById,pairings){
+  const ids=new Set();
+  for(const side of [match.side_a,match.side_b]){
+    if(!side)continue;
+    if(side.type==="entrant"){ const t=pairings[match.cat][side.idx]||[]; for(const pid of t) if(pid!=null) ids.add(pid); }
+    else if(side.winner_of){ const dep=matchById[side.winner_of]; if(dep) for(const pid of matchPlayers(dep,matchById,pairings)) ids.add(pid); }
+  }
+  return ids;
+}
+function generateBracketsAndSchedule(){
+  const pairings=window.STATE.pairings,allMatches=[],matchById={},catMaxRound={};
+  for(const c of CAT_ORDER){ const ents=pairings[c]||[];
+    if(ents.length<2){catMaxRound[c]=0;continue;}
+    const rounds=buildBracket(ents,c);
+    for(const rnd of rounds)for(const m of rnd){allMatches.push(m);matchById[m.match_id]=m;}
+    catMaxRound[c]=rounds.length;
+  }
+  for(const m of allMatches){
+    const fromEnd=catMaxRound[m.cat]-m.round;
+    if(fromEnd<=2){m.phase="KNOCKOUT";m.duration=window.STATE.settings.knockoutDuration;
+      m.stage=fromEnd===0?"Final":(fromEnd===1?"Semifinal":"Quarterfinal");}
+    else{m.phase="QUALIFIER";m.duration=window.STATE.settings.qualifierDuration;m.stage=`R${m.round}`;}
+  }
+  /* auto-resolve BYE matches */
+  const autoWin={},ordered=[...allMatches].sort((a,b)=>a.round-b.round);
+  for(const m of ordered){
+    const resolve=side=>side.type==="bye"?"BYE":side.type==="entrant"?"ENT":(side.winner_of?(autoWin[side.winner_of]||"PENDING"):"PENDING");
+    const ra=resolve(m.side_a),rb=resolve(m.side_b);
+    if(ra==="BYE"&&rb==="BYE")autoWin[m.match_id]="BYE";
+    else if(ra==="BYE"&&rb==="ENT")autoWin[m.match_id]="B";
+    else if(rb==="BYE"&&ra==="ENT")autoWin[m.match_id]="A";
+  }
+  /* ---- schedule packing (per-court free-interval list) ---- */
+  const blocks=window.STATE.settings.blocks,courts={};
+  for(const b of blocks)for(let c=1;c<=b.courts;c++)courts[`${b.date}|${c}|${b.label}`]={free:[[b.startMin,b.endMin]]};
+  const depsOf={};
+  for(const m of allMatches){const ds=[];if(m.side_a&&m.side_a.winner_of)ds.push(m.side_a.winner_of);if(m.side_b&&m.side_b.winner_of)ds.push(m.side_b.winner_of);depsOf[m.match_id]=ds;}
+  const priority={MS:0,WS:0,XD:0,MD:1,WD:1};
+  const sorted=[...allMatches].filter(m=>!autoWin[m.match_id]).sort((a,b)=>{
+    const pa=a.phase==="QUALIFIER"?0:1,pb=b.phase==="QUALIFIER"?0:1; if(pa!==pb)return pa-pb;
+    if(a.round!==b.round)return a.round-b.round;
+    const ca=priority[a.cat]??9,cb=priority[b.cat]??9; if(ca!==cb)return ca-cb;
+    return a.match_id.localeCompare(b.match_id);});
+  const schedById={},playerBusy={};
+  function findSlot(iv,dur,earliest){for(let i=0;i<iv.length;i++){const[s,e]=iv[i];const st=Math.max(s,earliest);if(st+dur<=e)return{i,start:st};}return null;}
+  function bookSlot(iv,i,start,end){const[s,e]=iv[i];iv.splice(i,1);let idx=i;if(s<start){iv.splice(idx,0,[s,start]);idx++;}if(end<e)iv.splice(idx,0,[end,e]);}
+  let changed=true,iter=0;
+  while(changed&&iter<30){changed=false;iter++;
+    for(const m of sorted){
+      if(schedById[m.match_id])continue;
+      let depOk=true; for(const d of depsOf[m.match_id]){if(schedById[d])continue;if(autoWin[d])continue;depOk=false;break;} if(!depOk)continue;
+      const pids=matchPlayers(m,matchById,pairings); let best=null;
+      for(const b of blocks){ if(b.phase!==m.phase)continue;
+        let earliest=b.startMin; for(const d of depsOf[m.match_id]){const ds=schedById[d];if(ds&&ds.date===b.date)earliest=Math.max(earliest,ds.endMin);}
+        for(let c=1;c<=b.courts;c++){ const ci=courts[`${b.date}|${c}|${b.label}`]; if(!ci)continue;
+          const slot=findSlot(ci.free,m.duration,earliest); if(!slot)continue;
+          const start=slot.start,end=start+m.duration; let overlap=false;
+          for(const pid of pids){const busy=playerBusy[pid]||[];for(const bb of busy){if(bb.date===b.date&&!(end<=bb.s||start>=bb.e)){overlap=true;break;}}if(overlap)break;}
+          if(overlap)continue;
+          const key=[b.date,start];
+          if(!best||key[0]<best.key[0]||(key[0]===best.key[0]&&key[1]<best.key[1])) best={key,b,c,ci,slotIdx:slot.i,start,end};
+        }
+      }
+      if(best){ bookSlot(best.ci.free,best.slotIdx,best.start,best.end);
+        schedById[m.match_id]={match_id:m.match_id,date:best.b.date,court:best.c,startMin:best.start,endMin:best.end,block:best.b.label,stage:m.stage,cat:m.cat,phase:m.phase,duration:m.duration};
+        for(const pid of pids)(playerBusy[pid]=playerBusy[pid]||[]).push({date:best.b.date,s:best.start,e:best.end});
+        changed=true;
+      }
+    }
+  }
+  window.STATE.matches=allMatches;
+  window.STATE.scheduled=Object.values(schedById);
+  window.STATE.unscheduled=allMatches.filter(m=>!autoWin[m.match_id]&&!schedById[m.match_id]).map(m=>({match_id:m.match_id,cat:m.cat,round:m.round,stage:m.stage}));
+  window.STATE.autoWin=autoWin;
+  saveState();
+}
+
+/* ---------------- Side-label resolution ----------------------------------- */
+function entrantLabel(cat,idx){const t=window.STATE.pairings[cat][idx];if(!t)return"?";return t.map(pname).join(" / ");}
+function sideLabelFor(cat,side){
+  if(!side)return"—";
+  if(side.type==="entrant")return entrantLabel(cat,side.idx);
+  if(side.type==="bye")return"BYE";
+  if(side.winner_of){const w=effectiveWinner(side.winner_of);
+    if(w==="PENDING")return`Winner of ${side.winner_of}`; if(w==="BYE")return"BYE";
+    const dep=window.STATE.matches.find(x=>x.match_id===side.winner_of); if(!dep)return"?";
+    return w==="A"?sideLabelFor(cat,dep.side_a):sideLabelFor(cat,dep.side_b);}
+  return"?";
+}
+function effectiveWinner(matchId){
+  if(window.STATE.results[matchId])return window.STATE.results[matchId];
+  if(window.STATE.autoWin&&window.STATE.autoWin[matchId])return window.STATE.autoWin[matchId];
+  return"PENDING";
+}
+function matchPlayersForResult(match,side){
+  const ids=new Set();
+  if(side.type==="entrant"){ (window.STATE.pairings[match.cat][side.idx]||[]).forEach(pid=>{if(pid!=null)ids.add(pid);}); }
+  else if(side.winner_of){ const w=effectiveWinner(side.winner_of),dep=window.STATE.matches.find(x=>x.match_id===side.winner_of);
+    if(dep&&(w==="A"||w==="B")){const ds=w==="A"?dep.side_a:dep.side_b;matchPlayersForResult(dep,ds).forEach(pid=>ids.add(pid));}}
+  return ids;
+}
+
+/* =========================================================================
+   MUTATIONS  (Requirements 1, 2, 3) — every one ends by regenerating the
+   bracket + schedule and re-rendering, so the UI updates instantly.
+   ========================================================================= */
+function afterChange(msg,type){ generateBracketsAndSchedule(); saveState(); render(); if(msg) toast(msg,type); }
+
+/* Detach a player from ONE category's pairings:
+   - doubles  → leave the slot VACANT (null) and KEEP the team + partner;
+                drop the team only if it becomes completely empty.
+   - singles  → remove that draw entrant. */
+function detachFromCat(pid,cat){
+  const teams=window.STATE.pairings[cat]||[];
+  for(let i=teams.length-1;i>=0;i--){
+    const t=teams[i],idx=t.indexOf(pid); if(idx===-1)continue;
+    if(SINGLES[cat]) teams.splice(i,1);
+    else{ t[idx]=null; window._recentFills.delete(`${cat}:${i}:${idx}`); if(t.every(x=>x==null)) teams.splice(i,1); }
+  }
+}
+/* Requirement 2 — remove a player from the whole tournament. */
+function removePlayer(pid){
+  const p=pById(pid); if(!p)return;
+  if(!confirm(`Remove ${p.name} from the tournament?\n\nThey will be taken out of every category. In any doubles pair their slot is left VACANT (the partner stays and the slot can be re-filled).`))return;
+  for(const c of CAT_ORDER) detachFromCat(pid,c);
+  window.STATE.players=window.STATE.players.filter(x=>x.id!==pid);
+  afterChange(`${p.name} removed — doubles slots left vacant for re-assignment`,"ok");
+}
+/* Requirement 1 — update a player's categories (and name/gender).
+   Existing valid pairings are preserved; only DROPPED categories detach. */
+function applyPlayerEdit(pid,name,gender,newCats){
+  const p=pById(pid); if(!p)return;
+  const oldCats=new Set(p.cats||[]); const nw=new Set(newCats);
+  p.name=name.trim()||p.name; p.gender=gender; p.cats=[...nw];
+  for(const c of oldCats) if(!nw.has(c)) detachFromCat(pid,c);          // dropped categories
+  for(const c of [...nw]) if(GENDER_OK[c]&&p.gender!==GENDER_OK[c]){    // gender now inconsistent
+      detachFromCat(pid,c); p.cats=p.cats.filter(x=>x!==c); }
+  afterChange(`${p.name} updated — pairings reconciled`,"ok");
+}
+function addPlayer(name,gender,cats,pref){
+  window.STATE.players.push({id:nextPlayerId(),name:name.trim(),gender,cats,partner_pref:pref||null});
+  afterChange(`${name} added — now available in their categories' Unpaired lists`,"ok");
+}
+
+/* Requirement 3 — assign / vacate / swap slots ------------------------------ */
+function assignToSlot(cat,ti,slot,pid){
+  if(!isAdmin())return;
+  const team=window.STATE.pairings[cat][ti]; if(!team)return;
+  if(!isEligible(pid,cat)){ toast(`${pname(pid)} is not nominated for ${CAT_LABEL[cat]}`,"warn"); return; }
+  // already in this category somewhere?
+  for(const t of window.STATE.pairings[cat]) if(t.indexOf(pid)!==-1){ toast(`${pname(pid)} is already placed in ${CAT_LABEL[cat]}`,"warn"); return; }
+  if(cat==="XD"){ const other=team[1-slot];
+    if(other!=null && pById(other).gender===pById(pid).gender){ toast("Mixed Doubles needs one male and one female","warn"); return; } }
+  team[slot]=pid; window._recentFills.add(`${cat}:${ti}:${slot}`);
+  afterChange(`${pname(pid)} assigned to ${CAT_LABEL[cat]} team ${ti+1}`,"ok");
+}
+function vacateSlot(cat,ti,slot){
+  if(!isAdmin())return;
+  const team=window.STATE.pairings[cat][ti]; if(!team)return;
+  const was=team[slot]; team[slot]=null; window._recentFills.delete(`${cat}:${ti}:${slot}`);
+  if(team.every(x=>x==null)) window.STATE.pairings[cat].splice(ti,1);  // drop empty team
+  afterChange(`${pname(was)} returned to Unpaired`,"ok");
+}
+function addEmptyTeam(cat){
+  if(!isAdmin())return;
+  window.STATE.pairings[cat].push(DOUBLES[cat]?[null,null]:[null]);
+  afterChange(`Added an empty ${CAT_LABEL[cat]} slot`,"ok");
+}
+/* swap two existing players (only meaningful while UNLOCKED) */
+function swapSlots(cat,aTi,aSlot,bTi,bSlot){
+  const arr=window.STATE.pairings[cat]; const tmp=arr[aTi][aSlot]; arr[aTi][aSlot]=arr[bTi][bSlot]; arr[bTi][bSlot]=tmp;
+  afterChange("Players swapped","ok");
+}
+/* add an eligible singles player as a new draw entrant */
+function addSinglesEntrant(cat,pid){
+  if(!isAdmin())return; if(!isEligible(pid,cat))return;
+  window.STATE.pairings[cat].push([pid]); afterChange(`${pname(pid)} added to the ${CAT_LABEL[cat]} draw`,"ok");
+}
+
+/* =========================================================================
+   TINY DOM HELPERS
+   ========================================================================= */
+const $=sel=>document.querySelector(sel);
+function el(tag,attrs={},...children){
+  const n=document.createElement(tag);
+  for(const[k,v]of Object.entries(attrs)){
+    if(v==null||v===false)continue;
+    if(k==="class")n.className=v; else if(k.startsWith("on"))n.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==="html")n.innerHTML=v; else n.setAttribute(k,v);
+  }
+  for(const c of children.flat()){ if(c==null||c===false)continue;
+    n.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c); }
+  return n;
+}
+function toast(msg,type){
+  let t=$("#toast"); if(!t){t=el("div",{id:"toast",class:"toast"});document.body.appendChild(t);}
+  t.className="toast "+(type||""); t.textContent=msg; requestAnimationFrame(()=>t.classList.add("show"));
+  clearTimeout(window._toastT); window._toastT=setTimeout(()=>t.classList.remove("show"),2600);
+}
+function closeModal(){ const o=$("#overlay"); if(o)o.remove(); }
+function modal(title,bodyNode,footer){
+  closeModal();
+  const ov=el("div",{id:"overlay",class:"overlay",onClick:e=>{if(e.target===ov)closeModal();}});
+  const m=el("div",{class:"modal"},el("h3",{},title),bodyNode,el("div",{class:"row"},...(footer||[])));
+  ov.appendChild(m); document.body.appendChild(ov); return ov;
+}
+
+/* =========================================================================
+   AUTH
+   ========================================================================= */
+function openLogin(){
+  const inp=el("input",{type:"password",placeholder:"Enter admin password",onkeydown:e=>{if(e.key==="Enter")tryLogin();}});
+  const err=el("div",{class:"muted",style:"color:#dc2626;min-height:16px;margin-top:6px"},"");
+  function tryLogin(){ if(sha256(ADMIN_SALT+":"+inp.value)===ADMIN_PASS_HASH){ window.IS_ADMIN=true; closeModal(); render(); toast("Admin mode unlocked — editing enabled","ok"); }
+    else { err.textContent="Incorrect password."; inp.value=""; inp.focus(); } }
+  modal("Admin login",
+    el("div",{},el("p",{class:"muted"},"Editing is locked. Enter the admin password to manage players, categories and pairings."),inp,err),
+    [el("button",{class:"btn",onClick:closeModal},"Cancel"),el("button",{class:"btn btn-primary",onClick:tryLogin},"Unlock")]);
+  setTimeout(()=>inp.focus(),50);
+}
+function logout(){ window.IS_ADMIN=false; render(); toast("Switched to view-only mode"); }
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function setTab(name){ window.STATE.activeTab=name; saveState(); render(); }
+function render(){
+  document.body.classList.toggle("admin",isAdmin());
+  const root=$("#app"); root.innerHTML="";
+  root.appendChild(renderHeader());
+  if(isViewer()) root.appendChild(el("div",{class:"notice notice-blue",style:"margin:14px 0 0"},
+    window.FORCE_SEED&&window.SNAPSHOT_AT?`👁 Read-only shared view · snapshot ${window.SNAPSHOT_AT}`
+      :"👁 You are viewing in read-only mode. Click “Admin login” to edit."));
+  root.appendChild(renderTabs());
+  const main=el("div",{}); root.appendChild(main);
+  const tab=window.STATE.activeTab;
+  const view={players:renderPlayers,settings:renderSettings,pairings:renderPairings,brackets:renderBrackets,
+    schedule:renderSchedule,results:renderResults,leaderboard:renderLeaderboard}[tab]||renderPlayers;
+  if(tab==="settings"&&!isAdmin()){ setTab("players"); return; } // settings is admin-only
+  main.appendChild(view());
+}
+function renderHeader(){
+  const actions=el("div",{class:"topactions"});
+  actions.appendChild(el("span",{class:"modepill "+(isAdmin()?"admin":"viewer")},isAdmin()?"✏️ Admin":"👁 View-only"));
+  if(isAdmin()){
+    actions.appendChild(el("button",{class:"btn btn-refresh",onClick:refreshAndExport},"↻ Refresh & Export Excel"));
+    actions.appendChild(el("button",{class:"btn btn-primary",onClick:exportShareableHTML},"🔗 Download view-only copy"));
+    actions.appendChild(el("button",{class:"btn",onClick:exportJSON},"Export JSON"));
+    actions.appendChild(el("button",{class:"btn",onClick:importJSON},"Import JSON"));
+    actions.appendChild(el("button",{class:"btn btn-warn",onClick:resetState},"Reset"));
+    actions.appendChild(el("button",{class:"btn",onClick:logout},"Log out"));
+  }else{
+    actions.appendChild(el("button",{class:"btn btn-primary",onClick:openLogin},"🔒 Admin login"));
+  }
+  return el("header",{class:"topbar"},
+    el("div",{class:"brand"},el("div",{class:"logo"},"AAI"),
+      el("div",{},el("h1",{},"AAI Badminton Tournament 2026"),el("div",{class:"sub"},"Scheduler · Pairings · Brackets · Results"))),
+    actions);
+}
+function renderTabs(){
+  const tabs=[["players","Players"],["pairings","Pairings"],["brackets","Brackets"],
+    ["schedule","Schedule"],["results","Results"],["leaderboard","Leaderboard"]];
+  if(isAdmin()) tabs.splice(1,0,["settings","Settings"]);
+  return el("nav",{class:"tabs"},...tabs.map(([k,l])=>el("button",{class:"tab"+(window.STATE.activeTab===k?" active":""),onClick:()=>setTab(k)},l)));
+}
+
+/* ---------- Players tab (add / edit categories / remove) ---------- */
+function renderPlayers(){
+  const div=el("div",{class:"panel"});
+  div.appendChild(el("h2",{},`Players (${window.STATE.players.length})`));
+  div.appendChild(el("p",{class:"muted"},isAdmin()
+    ?"Add players, edit the categories each player is nominated for, or remove a player. Pairings, brackets and the schedule update automatically."
+    :"Player roster and their nominated categories."));
+
+  if(isAdmin()){
+    const nameI=el("input",{type:"text",placeholder:"Full name"});
+    const genderI=el("select",{},el("option",{value:"Male"},"Male"),el("option",{value:"Female"},"Female"));
+    const cat1=el("select",{},...["","MS","MD","WS","WD","XD"].map(c=>el("option",{value:c},c?CAT_LABEL[c]:"— Category 1 —")));
+    const cat2=el("select",{},...["","MS","MD","WS","WD","XD"].map(c=>el("option",{value:c},c?CAT_LABEL[c]:"— Category 2 —")));
+    const add=el("button",{class:"btn btn-primary",onClick:()=>{
+      const name=nameI.value.trim(); if(!name){toast("Name required","warn");return;}
+      const cats=[cat1.value,cat2.value].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);
+      if(!cats.length){toast("Pick at least one category","warn");return;}
+      addPlayer(name,genderI.value,cats); nameI.value="";cat1.value="";cat2.value="";
+    }},"+ Add player");
+    div.appendChild(el("div",{class:"addform"},nameI,genderI,cat1,cat2,add));
+  }
+
+  const tbl=el("table",{class:"table"});
+  tbl.appendChild(el("thead",{},el("tr",{},el("th",{},"ID"),el("th",{},"Name"),el("th",{},"Gender"),el("th",{},"Categories"),isAdmin()&&el("th",{},"Actions"))));
+  const tb=el("tbody",{});
+  for(const p of window.STATE.players){
+    tb.appendChild(el("tr",{},
+      el("td",{},String(p.id)),el("td",{},p.name),el("td",{},p.gender),
+      el("td",{},(p.cats||[]).map(c=>CAT_LABEL[CAT_MAP[c]||c]||c).join(", ")||"—"),
+      isAdmin()&&el("td",{},el("div",{class:"resbtns"},
+        el("button",{class:"btn btn-sm",onClick:()=>openCatEditor(p.id)},"Edit"),
+        el("button",{class:"btn btn-sm btn-danger",onClick:()=>removePlayer(p.id)},"Remove")))
+    ));
+  }
+  tbl.appendChild(tb); div.appendChild(el("div",{class:"tablewrap"},tbl));
+  return div;
+}
+/* category editor modal (Requirement 1) */
+function openCatEditor(pid){
+  const p=pById(pid); if(!p)return;
+  const nameI=el("input",{type:"text",value:p.name});
+  const genderSel=el("select",{class:"fld"},el("option",{value:"Male"},"Male"),el("option",{value:"Female"},"Female"));
+  genderSel.value=p.gender;
+  const checks=el("div",{class:"checks"});
+  function paintChecks(){
+    checks.innerHTML="";
+    for(const c of CAT_ORDER){
+      const allowed=!GENDER_OK[c]||genderSel.value===GENDER_OK[c];
+      const cb=el("input",{type:"checkbox"}); cb.checked=(p.cats||[]).includes(c)&&allowed; cb.disabled=!allowed; cb.dataset.cat=c;
+      checks.appendChild(el("label",{class:allowed?"":"dis"},cb,`${CAT_LABEL[c]} (${c})`));
+    }
+  }
+  genderSel.addEventListener("change",paintChecks); paintChecks();
+  modal(`Edit ${p.name}`,
+    el("div",{},
+      el("label",{class:"settings-grid",style:"display:block;font-weight:700;font-size:12px"},"Name",nameI),
+      el("div",{style:"margin-top:12px;font-weight:700;font-size:12px"},"Gender",genderSel),
+      el("div",{style:"margin-top:12px;font-weight:700;font-size:12px"},"Nominated categories"),
+      checks,
+      el("p",{class:"muted",style:"margin-top:10px"},"Removing a category vacates this player's slot in that category's doubles pair (the partner stays) or removes their singles draw entry. Categories you keep are left untouched.")),
+    [el("button",{class:"btn",onClick:closeModal},"Cancel"),
+     el("button",{class:"btn btn-primary",onClick:()=>{
+        const cats=[...checks.querySelectorAll("input:checked")].map(cb=>cb.dataset.cat);
+        if(!cats.length){toast("Pick at least one category","warn");return;}
+        closeModal(); applyPlayerEdit(pid,nameI.value,genderSel.value,cats);
+     }},"Save changes")]);
+  setTimeout(()=>nameI.focus(),50);
+}
+
+/* ---------- Settings tab (admin only) ---------- */
+function renderSettings(){
+  const s=window.STATE.settings,div=el("div",{class:"panel"});
+  div.appendChild(el("h2",{},"Settings"));
+  div.appendChild(el("p",{class:"muted"},"Match durations, court availability and the random-draw seed. Changes apply on the next Refresh / regeneration."));
+  const seedI=el("input",{type:"number",value:String(s.seed)});seedI.addEventListener("change",()=>{s.seed=parseInt(seedI.value)||42;saveState();});
+  const qD=el("input",{type:"number",min:"5",max:"120",value:String(s.qualifierDuration)});qD.addEventListener("change",()=>{s.qualifierDuration=parseInt(qD.value)||15;saveState();});
+  const kD=el("input",{type:"number",min:"5",max:"120",value:String(s.knockoutDuration)});kD.addEventListener("change",()=>{s.knockoutDuration=parseInt(kD.value)||40;saveState();});
+  div.appendChild(el("div",{class:"settings-grid"},el("label",{},"Random seed",seedI),el("label",{},"Qualifier duration (min)",qD),el("label",{},"Knockout duration (min)",kD)));
+  div.appendChild(el("h3",{},"Court availability"));
+  const tbl=el("table",{class:"table"});
+  tbl.appendChild(el("thead",{},el("tr",{},el("th",{},"Date"),el("th",{},"Time"),el("th",{},"Start (min)"),el("th",{},"End (min)"),el("th",{},"Courts"),el("th",{},"Phase"),el("th",{},""))));
+  const tb=el("tbody",{});
+  s.blocks.forEach((b,i)=>{
+    const dI=el("input",{type:"date",value:b.date}),lI=el("input",{type:"text",value:b.label}),sI=el("input",{type:"number",value:String(b.startMin)}),eI=el("input",{type:"number",value:String(b.endMin)}),cI=el("input",{type:"number",min:"1",max:"10",value:String(b.courts)});
+    const pI=el("select",{},el("option",{value:"QUALIFIER"},"QUALIFIER"),el("option",{value:"KNOCKOUT"},"KNOCKOUT"));pI.value=b.phase;
+    [dI,lI,sI,eI,cI,pI].forEach(inp=>inp.addEventListener("change",()=>{b.date=dI.value;b.label=lI.value;b.startMin=parseInt(sI.value)||0;b.endMin=parseInt(eI.value)||0;b.courts=parseInt(cI.value)||1;b.phase=pI.value;saveState();}));
+    tb.appendChild(el("tr",{},el("td",{},dI),el("td",{},lI),el("td",{},sI),el("td",{},eI),el("td",{},cI),el("td",{},pI),
+      el("td",{},el("button",{class:"btn btn-sm btn-danger",onClick:()=>{s.blocks.splice(i,1);saveState();render();}},"Remove"))));
+  });
+  tbl.appendChild(tb); div.appendChild(el("div",{class:"tablewrap"},tbl));
+  div.appendChild(el("button",{class:"btn",style:"margin-top:12px",onClick:()=>{s.blocks.push({date:"2026-07-12",label:"NEW",startMin:540,endMin:720,courts:2,phase:"KNOCKOUT"});saveState();render();}},"+ Add court block"));
+  return div;
+}
+
+/* ---------- Pairings tab (Requirements 2,3,4,5) ---------- */
+function renderPairings(){
+  const div=el("div",{class:"panel"});
+  div.appendChild(el("h2",{},"Pairings"));
+  const locked=window.STATE.pairingsLocked;
+
+  // status + actions
+  const actions=el("div",{class:"actionbar"});
+  actions.appendChild(el("div",{class:"badge "+(locked?"badge-success":"")},locked?"🔒 Pairings finalised":"Pairings open"));
+  if(isAdmin()){
+    if(!locked){
+      actions.appendChild(el("button",{class:"btn btn-primary",onClick:()=>{window.STATE.pairings=generatePairings();afterChange("Pairings generated","ok");}},"Generate pairings"));
+      actions.appendChild(el("button",{class:"btn btn-success",onClick:()=>{if(confirm("Finalise (lock) pairings? Existing teams then become fixed; admins can still fill vacant slots."))(window.STATE.pairingsLocked=true,afterChange("Pairings finalised","ok"));}},"🔒 Finalise pairings"));
+    }else{
+      actions.appendChild(el("button",{class:"btn btn-warn",onClick:()=>{if(confirm("Unlock pairings for full re-generation? Only do this before play begins."))(window.STATE.pairingsLocked=false,afterChange("Pairings unlocked"));}},"Unlock"));
+    }
+  }
+  div.appendChild(actions);
+
+  if(isAdmin()) div.appendChild(el("div",{class:"notice notice-amber"},
+    locked?"Finalised teams are fixed. You can fill any vacant slot — drag a player from “Unpaired Players”, or tap a vacant slot to pick. Brackets & schedule update instantly."
+      :"Drag players between slots to adjust, drag from “Unpaired Players” into vacant slots, or use “Generate pairings”."));
+
+  for(const c of CAT_ORDER){
+    const ents=window.STATE.pairings[c]||[];
+    const block=el("div",{class:"cat-block","data-cat":c});
+    const head=el("div",{class:"cat-head"},
+      el("div",{class:"cat-title"},el("span",{class:"dot"}),`${CAT_LABEL[c]}`,el("span",{class:"count-badge"},`${ents.length} ${SINGLES[c]?"players":"teams"}`)));
+    if(isAdmin()) head.appendChild(el("button",{class:"btn btn-sm",onClick:()=>SINGLES[c]?addEmptyTeam(c):addEmptyTeam(c)},DOUBLES[c]?"+ Add empty pair":"+ Add draw slot"));
+    block.appendChild(head);
+
+    if(!ents.length){ block.appendChild(el("p",{class:"muted"},"No entries yet.")); }
+    else{
+      const grid=el("div",{class:"team-grid"});
+      ents.forEach((t,ti)=>{
+        const card=el("div",{class:"team-card"},el("div",{class:"team-no"},String(ti+1)));
+        const slots=el("div",{class:"slots"});
+        if(SINGLES[c]){ slots.appendChild(makeSlot(c,ti,0,t[0])); }
+        else{ slots.appendChild(makeSlot(c,ti,0,t[0])); slots.appendChild(el("span",{class:"vs"},"&")); slots.appendChild(makeSlot(c,ti,1,t[1])); }
+        card.appendChild(slots); grid.appendChild(card);
+      });
+      block.appendChild(grid);
+    }
+
+    // ---- Unpaired Players section (all categories; required for doubles) ----
+    const unpaired=getUnpaired(c);
+    const up=el("div",{class:"unpaired"});
+    up.appendChild(el("h4",{},`Unpaired players`,el("span",{class:"count-badge"},String(unpaired.length))));
+    const pool=el("div",{class:"pool","data-cat":c});
+    if(isAdmin()){ // dropping a just-filled chip back here vacates it
+      pool.addEventListener("dragover",e=>{e.preventDefault();pool.classList.add("droptarget");});
+      pool.addEventListener("dragleave",()=>pool.classList.remove("droptarget"));
+      pool.addEventListener("drop",e=>{e.preventDefault();pool.classList.remove("droptarget");
+        const d=safeData(e); if(d&&d.src==="slot"&&d.cat===c) vacateSlot(c,d.ti,d.slot);});
+    }
+    if(!unpaired.length) pool.appendChild(el("span",{class:"empty"},"Everyone eligible is paired."));
+    else unpaired.forEach(pid=>pool.appendChild(makeChip(c,pid)));
+    up.appendChild(pool);
+    block.appendChild(up);
+    div.appendChild(block);
+  }
+  return div;
+}
+/* a single slot inside a team (filled chip OR vacant drop-zone) */
+function makeSlot(cat,ti,slot,pid){
+  if(pid==null){
+    const v=el("div",{class:"slot vacant"},"＋ vacant");
+    if(isAdmin()){
+      v.addEventListener("dragover",e=>{e.preventDefault();v.classList.add("droptarget");});
+      v.addEventListener("dragleave",()=>v.classList.remove("droptarget"));
+      v.addEventListener("drop",e=>{e.preventDefault();v.classList.remove("droptarget");onDropToSlot(e,cat,ti,slot);});
+      v.addEventListener("click",()=>openPicker(cat,ti,slot)); // mobile / click fallback
+      v.title="Drop an eligible player here, or tap to pick";
+    }
+    return v;
+  }
+  const locked=window.STATE.pairingsLocked;
+  const canMove=isAdmin()&&(!locked||window._recentFills.has(`${cat}:${ti}:${slot}`));
+  const chip=el("div",{class:"slot filled"+(canMove?" drag":""),draggable:canMove?"true":null},pname(pid));
+  if(canMove){
+    chip.addEventListener("dragstart",e=>{chip.classList.add("dragging");setData(e,{src:"slot",cat,ti,slot,pid});});
+    chip.addEventListener("dragend",()=>chip.classList.remove("dragging"));
+    chip.addEventListener("dragover",e=>{e.preventDefault();chip.classList.add("droptarget");});
+    chip.addEventListener("dragleave",()=>chip.classList.remove("droptarget"));
+    chip.addEventListener("drop",e=>{e.preventDefault();chip.classList.remove("droptarget");onDropToSlot(e,cat,ti,slot);});
+    // an X to return this (session-filled) player to the unpaired pool
+    if(window._recentFills.has(`${cat}:${ti}:${slot}`))
+      chip.appendChild(el("span",{class:"x",title:"Vacate",onClick:e=>{e.stopPropagation();vacateSlot(cat,ti,slot);}},"✕"));
+  }
+  return chip;
+}
+/* a draggable chip in the Unpaired pool */
+function makeChip(cat,pid){
+  const p=pById(pid);
+  const chip=el("div",{class:"chip"+(isAdmin()?" drag":""),draggable:isAdmin()?"true":null},
+    isAdmin()&&el("span",{class:"grip"},"⠿"),p?p.name:("#"+pid),el("span",{class:"g"},p?(p.gender==="Male"?"M":"F"):""));
+  if(isAdmin()){
+    chip.addEventListener("dragstart",e=>{chip.classList.add("dragging");setData(e,{src:"unpaired",cat,pid});});
+    chip.addEventListener("dragend",()=>chip.classList.remove("dragging"));
+    if(SINGLES[cat]) chip.addEventListener("click",()=>addSinglesEntrant(cat,pid)); // quick add for singles
+    chip.title=SINGLES[cat]?"Drag onto a vacant draw slot, or click to add to the draw":"Drag into a vacant slot";
+  }
+  return chip;
+}
+/* drag payload helpers */
+function setData(e,obj){ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain",JSON.stringify(obj)); }
+function safeData(e){ try{ return JSON.parse(e.dataTransfer.getData("text/plain")); }catch{ return null; } }
+function onDropToSlot(e,cat,ti,slot){
+  const d=safeData(e); if(!d||d.cat!==cat)return;
+  if(d.src==="unpaired") assignToSlot(cat,ti,slot,d.pid);
+  else if(d.src==="slot"){
+    if(d.ti===ti&&d.slot===slot)return;
+    const target=window.STATE.pairings[cat][ti][slot];
+    if(target==null){ // moving into a vacant slot = relocate
+      window.STATE.pairings[cat][ti][slot]=d.pid; window.STATE.pairings[cat][d.ti][d.slot]=null;
+      window._recentFills.add(`${cat}:${ti}:${slot}`);
+      if(window.STATE.pairings[cat][d.ti].every(x=>x==null)) window.STATE.pairings[cat].splice(d.ti,1);
+      afterChange("Player moved","ok");
+    } else if(!window.STATE.pairingsLocked){ swapSlots(cat,d.ti,d.slot,ti,slot); }
+    else toast("Finalised teams can't be swapped — only vacant slots can be filled","warn");
+  }
+}
+/* click-to-pick (mobile-friendly): choose an eligible unpaired player */
+function openPicker(cat,ti,slot){
+  const pool=getUnpaired(cat).filter(pid=>{ if(cat!=="XD")return true; const other=window.STATE.pairings[cat][ti][1-slot]; return other==null||pById(other).gender!==pById(pid).gender; });
+  const body=el("div",{},el("p",{class:"muted"},`Pick a player nominated for ${CAT_LABEL[cat]} to fill team ${ti+1}.`));
+  const wrap=el("div",{class:"pick-pool"});
+  if(!pool.length) wrap.appendChild(el("span",{class:"empty muted"},"No eligible unpaired players available."));
+  pool.forEach(pid=>{const p=pById(pid);wrap.appendChild(el("div",{class:"chip",onClick:()=>{closeModal();assignToSlot(cat,ti,slot,pid);}},p.name,el("span",{class:"g"},p.gender==="Male"?"M":"F")));});
+  body.appendChild(wrap);
+  modal(`Fill ${CAT_LABEL[cat]} slot`,body,[el("button",{class:"btn",onClick:closeModal},"Close")]);
+}
+
+/* ---------- Brackets tab ---------- */
+function renderBrackets(){
+  const div=el("div",{class:"panel"}); div.appendChild(el("h2",{},"Brackets"));
+  if(!window.STATE.matches.length){div.appendChild(el("p",{class:"muted"},"No matches yet."));return div;}
+  const cur=window.STATE._bracketCat||"MS";
+  const tabs=el("div",{class:"subtabs"});
+  CAT_ORDER.forEach(c=>tabs.appendChild(el("button",{class:"subtab"+(cur===c?" active":""),onClick:()=>{window.STATE._bracketCat=c;saveState();render();}},CAT_LABEL[c])));
+  div.appendChild(tabs);
+  const cm=window.STATE.matches.filter(m=>m.cat===cur);
+  if(!cm.length){div.appendChild(el("p",{class:"muted"},"No matches in this category."));return div;}
+  const maxR=Math.max(...cm.map(m=>m.round)),rounds=[];
+  for(let r=1;r<=maxR;r++)rounds.push(cm.filter(m=>m.round===r).sort((a,b)=>parseInt(a.match_id.split("-").pop())-parseInt(b.match_id.split("-").pop())));
+  const wrap=el("div",{class:"bracket-wrap"});
+  rounds.forEach((rms,i)=>{
+    const col=el("div",{class:"bracket-col"});
+    col.appendChild(el("div",{class:"bracket-stage"},i===maxR-1?"Final":i===maxR-2?"Semifinal":i===maxR-3?"Quarterfinal":`Round ${i+1}`));
+    rms.forEach(m=>{const a=sideLabelFor(cur,m.side_a),b=sideLabelFor(cur,m.side_b),w=effectiveWinner(m.match_id);
+      col.appendChild(el("div",{class:"match-card"},el("div",{class:"match-id"},m.match_id+(m.stage?` · ${m.stage}`:"")),
+        el("div",{class:"match-side"+(w==="A"?" winner":(w==="BYE"&&a==="BYE"?" bye":""))},a),
+        el("div",{class:"match-side"+(w==="B"?" winner":(w==="BYE"&&b==="BYE"?" bye":""))},b)));});
+    wrap.appendChild(col);
+  });
+  div.appendChild(wrap); return div;
+}
+
+/* ---------- Schedule tab ---------- */
+function renderSchedule(){
+  const div=el("div",{class:"panel"}); div.appendChild(el("h2",{},"Match Schedule"));
+  const sched=window.STATE.scheduled;
+  if(!sched.length){div.appendChild(el("p",{class:"muted"},"No schedule yet."));return div;}
+  const unsched=window.STATE.unscheduled||[];
+  div.appendChild(el("p",{class:"muted"},`${sched.length} matches scheduled. `,unsched.length?el("span",{class:"warn"},`${unsched.length} did not fit available court time.`):"All matches fit."));
+  const byDate={}; for(const s of sched)(byDate[s.date]=byDate[s.date]||[]).push(s);
+  Object.keys(byDate).sort().forEach(d=>{
+    div.appendChild(el("h3",{},dateLabel(d)+", 2026"));
+    const tbl=el("table",{class:"table"});
+    tbl.appendChild(el("thead",{},el("tr",{},el("th",{},"Time"),el("th",{},"Court"),el("th",{},"Match"),el("th",{},"Category"),el("th",{},"Stage"),el("th",{},"Side A"),el("th",{},"Side B"),el("th",{},"Result"))));
+    const tb=el("tbody",{});
+    byDate[d].sort((a,b)=>a.startMin-b.startMin||a.court-b.court).forEach(s=>{
+      const m=window.STATE.matches.find(x=>x.match_id===s.match_id);const a=sideLabelFor(m.cat,m.side_a),b=sideLabelFor(m.cat,m.side_b),w=effectiveWinner(m.match_id);
+      const res=w==="PENDING"?"—":(w==="A"?a:(w==="B"?b:"BYE"));
+      tb.appendChild(el("tr",{},el("td",{},`${mmToHHMM(s.startMin)}–${mmToHHMM(s.endMin)}`),el("td",{},"Court "+s.court),el("td",{},s.match_id),el("td",{},CAT_LABEL[s.cat]),el("td",{},s.stage),
+        el("td",{class:w==="A"?"winner":""},a),el("td",{class:w==="B"?"winner":""},b),el("td",{class:w!=="PENDING"?"ok":""},res)));
+    });
+    tbl.appendChild(tb); div.appendChild(el("div",{class:"tablewrap"},tbl));
+  });
+  return div;
+}
+
+/* ---------- Results tab ---------- */
+function renderResults(){
+  const div=el("div",{class:"panel"}); div.appendChild(el("h2",{},"Results"));
+  div.appendChild(el("p",{class:"muted"},isAdmin()?"Click A or B to set each match winner. Next-round matches and the leaderboard update automatically.":"Match results (read-only)."));
+  if(!window.STATE.matches.length){div.appendChild(el("p",{class:"muted"},"No matches yet."));return div;}
+  // stats
+  const statsBar=el("div",{class:"stats-bar"});const cs={};let tp=0,tr=0,tb2=0;
+  for(const c of CAT_ORDER)cs[c]={played:0,remaining:0,bye:0,total:0};
+  for(const m of window.STATE.matches){const w=effectiveWinner(m.match_id);if(!cs[m.cat])continue;cs[m.cat].total++;
+    if(w==="A"||w==="B"){cs[m.cat].played++;tp++;}else if(w==="BYE"){cs[m.cat].bye++;tb2++;}else{cs[m.cat].remaining++;tr++;}}
+  const oc=el("div",{class:"stat-card",style:"border-color:var(--navy)"});oc.appendChild(el("div",{class:"stat-label"},"OVERALL"));
+  oc.appendChild(el("div",{class:"stat-nums"},el("span",{class:"stat-played"},tp+" played")," / ",el("span",{class:"stat-remaining"},tr+" left"),el("span",{class:"stat-total"},` (${tp+tr+tb2} total, ${tb2} BYE)`)));
+  statsBar.appendChild(oc);
+  for(const c of CAT_ORDER){const s=cs[c];if(!s.total)continue;const card=el("div",{class:"stat-card"});card.appendChild(el("div",{class:"stat-label"},CAT_LABEL[c]));
+    card.appendChild(el("div",{class:"stat-nums"},el("span",{class:"stat-played"},String(s.played))," / ",el("span",{class:"stat-remaining"},String(s.remaining)),el("span",{class:"stat-total"},` (${s.total})`)));statsBar.appendChild(card);}
+  div.appendChild(statsBar);
+  // filters
+  const catF=el("select",{},el("option",{value:""},"All categories"),...CAT_ORDER.map(c=>el("option",{value:c},CAT_LABEL[c])));catF.value=(window.STATE._resFilter||{}).cat||"";
+  const stF=el("select",{},el("option",{value:""},"All"),el("option",{value:"pending"},"Pending"),el("option",{value:"done"},"Decided"));stF.value=(window.STATE._resFilter||{}).status||"";
+  [catF,stF].forEach(s=>s.addEventListener("change",()=>{window.STATE._resFilter={cat:catF.value,status:stF.value};saveState();render();}));
+  div.appendChild(el("div",{class:"filterbar"},el("label",{},"Category",catF),el("label",{},"Status",stF)));
+  // table
+  const schedById={};for(const s of window.STATE.scheduled)schedById[s.match_id]=s;
+  const matches=[...window.STATE.matches].sort((a,b)=>{const sa=schedById[a.match_id],sb=schedById[b.match_id];if(sa&&sb)return (sa.date+sa.startMin).localeCompare(sb.date+sb.startMin)||sa.startMin-sb.startMin;if(sa)return -1;if(sb)return 1;return a.round-b.round;});
+  const filt=window.STATE._resFilter||{};
+  const tbl=el("table",{class:"table"});
+  tbl.appendChild(el("thead",{},el("tr",{},el("th",{},"Match"),el("th",{},"Cat"),el("th",{},"Stage"),el("th",{},"When"),el("th",{},"Side A"),el("th",{},"Side B"),el("th",{},"Winner"),el("th",{},"Status"))));
+  const tb=el("tbody",{});
+  for(const m of matches){
+    if(filt.cat&&m.cat!==filt.cat)continue;
+    const a=sideLabelFor(m.cat,m.side_a),b=sideLabelFor(m.cat,m.side_b),w=effectiveWinner(m.match_id);
+    const pending=w==="PENDING",decided=w==="A"||w==="B"||w==="BYE";
+    if(filt.status==="pending"&&!pending)continue; if(filt.status==="done"&&!decided)continue;
+    const s=schedById[m.match_id];
+    const setWin=side=>{window.STATE.results[m.match_id]=window.STATE.results[m.match_id]===side?undefined:side;if(!window.STATE.results[m.match_id])delete window.STATE.results[m.match_id];afterChange();};
+    const winnerCell=isAdmin()
+      ?el("div",{class:"resbtns"},el("button",{class:"btn btn-sm "+(w==="A"?"btn-success":""),onClick:()=>setWin("A")},"A"),el("button",{class:"btn btn-sm "+(w==="B"?"btn-success":""),onClick:()=>setWin("B")},"B"))
+      :el("span",{},w==="A"?"A":w==="B"?"B":w==="BYE"?"BYE":"—");
+    tb.appendChild(el("tr",{class:pending?"pending":"done"},el("td",{},m.match_id),el("td",{},CAT_LABEL[m.cat]),el("td",{},m.stage),
+      el("td",{},s?`${dateLabel(s.date)} ${mmToHHMM(s.startMin)} · C${s.court}`:"—"),
+      el("td",{class:w==="A"?"winner":""},a),el("td",{class:w==="B"?"winner":""},b),el("td",{},winnerCell),el("td",{class:decided?"ok":"warn"},decided?(w==="BYE"?"BYE":"Decided"):"Pending")));
+  }
+  tbl.appendChild(tb); div.appendChild(el("div",{class:"tablewrap"},tbl));
+  return div;
+}
+
+/* ---------- Leaderboard tab ---------- */
+function renderLeaderboard(){
+  const div=el("div",{class:"panel"});div.appendChild(el("h2",{},"Leaderboard"));
+  const wins={};for(const p of window.STATE.players)wins[p.id]=0;
+  for(const m of window.STATE.matches){const w=effectiveWinner(m.match_id);if(w!=="A"&&w!=="B")continue;
+    matchPlayersForResult(m,w==="A"?m.side_a:m.side_b).forEach(pid=>wins[pid]=(wins[pid]||0)+1);}
+  const rows=window.STATE.players.map(p=>({name:p.name,gender:p.gender,cats:(p.cats||[]).map(c=>CAT_LABEL[CAT_MAP[c]||c]||c).join(", "),wins:wins[p.id]||0}));
+  rows.sort((a,b)=>b.wins-a.wins||a.name.localeCompare(b.name));
+  const tbl=el("table",{class:"table"});
+  tbl.appendChild(el("thead",{},el("tr",{},el("th",{},"Rank"),el("th",{},"Player"),el("th",{},"Gender"),el("th",{},"Categories"),el("th",{},"Wins"))));
+  const tb=el("tbody",{});rows.forEach((r,i)=>tb.appendChild(el("tr",{},el("td",{},String(i+1)),el("td",{},r.name),el("td",{},r.gender),el("td",{},r.cats),el("td",{class:r.wins>0?"ok":""},String(r.wins)))));
+  tbl.appendChild(tb);div.appendChild(el("div",{class:"tablewrap"},tbl));return div;
+}
+
+/* =========================================================================
+   EXPORTS
+   ========================================================================= */
+function refreshAndExport(){ if(!isAdmin())return;
+  if(!Object.keys(window.STATE.pairings).length)window.STATE.pairings=generatePairings();
+  generateBracketsAndSchedule();saveState();render();exportToExcel();
+}
+function exportToExcel(){
+  if(typeof XLSX==="undefined"){toast("Excel library not loaded (needs internet)","warn");return;}
+  const wb=XLSX.utils.book_new();
+  const pr=[["ID","Name","Gender","Category 1","Category 2","Partner Preference"]];
+  for(const p of window.STATE.players){const cats=(p.cats||[]).map(c=>CAT_LABEL[CAT_MAP[c]||c]||c);pr.push([p.id,p.name,p.gender,cats[0]||"",cats[1]||"",p.partner_pref||""]);}
+  const wsP=XLSX.utils.aoa_to_sheet(pr);wsP["!cols"]=[{wch:5},{wch:24},{wch:8},{wch:18},{wch:18},{wch:24}];XLSX.utils.book_append_sheet(wb,wsP,"Players");
+  const pa=[];for(const c of CAT_ORDER){const ents=window.STATE.pairings[c]||[];if(!ents.length)continue;const sg=SINGLES[c];
+    pa.push([CAT_LABEL[c]]);pa.push(sg?["#","Player"]:["#","Player 1","Player 2"]);
+    ents.forEach((t,i)=>sg?pa.push([i+1,pname(t[0])]):pa.push([i+1,pname(t[0]),pname(t[1])]));pa.push([]);}
+  const wsA=XLSX.utils.aoa_to_sheet(pa);wsA["!cols"]=[{wch:5},{wch:24},{wch:24}];XLSX.utils.book_append_sheet(wb,wsA,"Pairings");
+  const sc=[["Date","Time","Court","Match","Category","Stage","Side A","Side B","Result"]];
+  [...(window.STATE.scheduled||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.startMin-b.startMin||a.court-b.court).forEach(s=>{
+    const m=window.STATE.matches.find(x=>x.match_id===s.match_id);if(!m)return;const a=sideLabelFor(m.cat,m.side_a),b=sideLabelFor(m.cat,m.side_b),w=effectiveWinner(m.match_id);
+    sc.push([dateLabel(s.date),mmToHHMM(s.startMin)+"–"+mmToHHMM(s.endMin),"Court "+s.court,s.match_id,CAT_LABEL[s.cat],s.stage,a,b,w==="PENDING"?"":(w==="A"?a:(w==="B"?b:"BYE"))]);});
+  const wsS=XLSX.utils.aoa_to_sheet(sc);wsS["!cols"]=[{wch:10},{wch:14},{wch:10},{wch:14},{wch:18},{wch:12},{wch:30},{wch:30},{wch:30}];XLSX.utils.book_append_sheet(wb,wsS,"Schedule");
+  const rr=[["Match","Category","Stage","Side A","Side B","Winner","Status"]];
+  [...window.STATE.matches].sort((a,b)=>a.round-b.round||a.match_id.localeCompare(b.match_id)).forEach(m=>{const a=sideLabelFor(m.cat,m.side_a),b=sideLabelFor(m.cat,m.side_b),w=effectiveWinner(m.match_id);
+    rr.push([m.match_id,CAT_LABEL[m.cat],m.stage,a,b,w==="A"?a:(w==="B"?b:(w==="BYE"?"BYE":"")),(w==="A"||w==="B")?"Decided":(w==="BYE"?"BYE":"Pending")]);});
+  const wsR=XLSX.utils.aoa_to_sheet(rr);wsR["!cols"]=[{wch:14},{wch:18},{wch:12},{wch:30},{wch:30},{wch:30},{wch:10}];XLSX.utils.book_append_sheet(wb,wsR,"Results");
+  const lw={};for(const p of window.STATE.players)lw[p.id]=0;
+  for(const m of window.STATE.matches){const w=effectiveWinner(m.match_id);if(w!=="A"&&w!=="B")continue;matchPlayersForResult(m,w==="A"?m.side_a:m.side_b).forEach(pid=>lw[pid]=(lw[pid]||0)+1);}
+  const lb=window.STATE.players.map(p=>({name:p.name,gender:p.gender,cats:(p.cats||[]).map(c=>CAT_LABEL[CAT_MAP[c]||c]||c).join(", "),wins:lw[p.id]||0})).sort((a,b)=>b.wins-a.wins||a.name.localeCompare(b.name));
+  const lr=[["Rank","Player","Gender","Categories","Wins"]];lb.forEach((r,i)=>lr.push([i+1,r.name,r.gender,r.cats,r.wins]));
+  const wsL=XLSX.utils.aoa_to_sheet(lr);wsL["!cols"]=[{wch:6},{wch:24},{wch:8},{wch:30},{wch:6}];XLSX.utils.book_append_sheet(wb,wsL,"Leaderboard");
+  XLSX.writeFile(wb,"Tournament_Schedule_"+new Date().toISOString().slice(0,10)+".xlsx");
+  toast("Excel exported","ok");
+}
+/* Requirement 6 — produce a self-contained, read-only shareable copy.
+   It bakes the CURRENT state into SEED_STATE and sets FORCE_SEED so the
+   recipient always sees this published snapshot, opens read-only, and has
+   no admin data. (They could still log in with the password, by design.) */
+function exportShareableHTML(){
+  if(!isAdmin())return;
+  const ts=new Date().toLocaleString();
+  let html="<!DOCTYPE html>\n"+document.documentElement.outerHTML;
+  const baked="/*SEED_STATE_START*/\nwindow.SEED_PLAYERS = "+JSON.stringify(window.STATE.players)+";\n"+
+    "window.SEED_STATE = "+JSON.stringify(window.STATE)+";\n"+
+    "window.FORCE_SEED = true; window.SNAPSHOT_AT = "+JSON.stringify(ts)+";\n/*SEED_STATE_END*/";
+  html=html.replace(/\/\*SEED_STATE_START\*\/[\s\S]*?\/\*SEED_STATE_END\*\//,()=>baked);
+  const blob=new Blob([html],{type:"text/html"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="AAI_Tournament_View_"+new Date().toISOString().slice(0,10)+".html";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+  toast("View-only copy downloaded — share this file","ok");
+}
+function exportJSON(){ if(!isAdmin())return;
+  const blob=new Blob([JSON.stringify(window.STATE,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download="tournament_state_"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+function importJSON(){ if(!isAdmin())return;
+  const inp=document.createElement("input");inp.type="file";inp.accept=".json";
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.players)throw new Error("missing players");window.STATE=migrate(o);window._recentFills.clear();saveState();render();toast("State imported","ok");}catch(e){toast("Invalid file: "+e.message,"warn");}};
+    r.readAsText(f);};
+  inp.click();
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+window.STATE=loadState();
+(function boot(){
+  const hasPairings=Object.values(window.STATE.pairings||{}).some(a=>a&&a.length);
+  if(hasPairings && !window.STATE.matches.length){
+    generateBracketsAndSchedule();              // seeded pairings, no bracket yet -> build it
+  }else if(!hasPairings && window.STATE.players.length){
+    window.STATE.pairings=generatePairings();   // nothing set -> generate a fresh draw
+    generateBracketsAndSchedule(); saveState();
+  }
+})();
+document.addEventListener("DOMContentLoaded",render);
+if(document.readyState!=="loading") render();
+</script>
+</body>
+</html>
